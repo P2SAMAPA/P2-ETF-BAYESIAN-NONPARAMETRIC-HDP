@@ -20,7 +20,7 @@ UNIVERSES = {
 }
 
 # HDP parameters
-TRUNCATION = 20               # maximum number of regimes
+TRUNCATION = 10               # maximum number of regimes
 ALPHA = 1.0                   # concentration parameter for HDP
 GAMMA = 1.0                   # second‑level concentration
 GIBBS_ITERATIONS = 20        # number of Gibbs sampling iterations
