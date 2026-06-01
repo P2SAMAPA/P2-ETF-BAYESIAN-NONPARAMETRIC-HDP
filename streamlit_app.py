@@ -94,16 +94,23 @@ def display_universe(universe_name, uni_data, window_data, window_label):
     cols = st.columns(3)
     for idx, etf in enumerate(top3):
         with cols[idx]:
+            raw_val = etf.get('raw_score', 0.0)
+            if raw_val is None or np.isnan(raw_val):
+                raw_val = 0.0
             st.markdown(f"""
             <div class="hero-card">
                 <h3>{etf['ticker']}</h3>
-                <p>High‑vol regime prob: {etf['hdp_score_norm']:.3f}</p>
-                <p style="font-size:0.9rem;">raw: {etf['raw_score']:.4f}</p>
+                <p>High‑vol regime prob: {etf.get('hdp_score_norm', 0.0):.3f}</p>
+                <p style="font-size:0.9rem;">raw: {raw_val:.4f}</p>
             </div>
             """, unsafe_allow_html=True)
     with st.expander(f"Full ranking for {universe_name}"):
-        df_full = pd.DataFrame(list(norm_scores.items()), columns=["Ticker", "Normalized Probability"])
-        df_full["Raw Score"] = df_full["Ticker"].apply(lambda t: raw_scores[t])
+        # Replace None with 0 for display
+        norm_list = []
+        for t, s in norm_scores.items():
+            norm_list.append((t, s if s is not None else 0.0))
+        df_full = pd.DataFrame(norm_list, columns=["Ticker", "Normalized Probability"])
+        df_full["Raw Score"] = df_full["Ticker"].apply(lambda t: raw_scores[t] if raw_scores.get(t) is not None else 0.0)
         df_full = df_full.sort_values("Normalized Probability", ascending=False)
         st.dataframe(df_full, use_container_width=True)
 
