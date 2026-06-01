@@ -9,10 +9,12 @@ import data_manager as dm
 from hdp_hmm import hdp_hmm_score
 
 def normalize_scores(score_dict):
-    scores = np.array(list(score_dict.values()))
+    # Replace None or NaN with 0
+    scores = [v if v is not None and not np.isnan(v) else 0.0 for v in score_dict.values()]
+    scores = np.array(scores)
     min_s, max_s = scores.min(), scores.max()
     if max_s - min_s < 1e-12:
-        return {k: 0.0 for k in score_dict}
+        return {ticker: 0.0 for ticker in score_dict}
     norm = (scores - min_s) / (max_s - min_s)
     return {ticker: float(norm[i]) for i, ticker in enumerate(score_dict.keys())}
 
@@ -22,9 +24,15 @@ def run_for_window(returns, window_days):
     ret_window = returns.iloc[-window_days:]
     raw_scores = {}
     for ticker in ret_window.columns:
-        s = hdp_hmm_score(ret_window[ticker], K=config.TRUNCATION, alpha=config.ALPHA, gamma=config.GAMMA,
-                          gibbs_iter=config.GIBBS_ITERATIONS, burn_in=config.BURN_IN)
-        raw_scores[ticker] = s
+        try:
+            s = hdp_hmm_score(ret_window[ticker].values, K=config.TRUNCATION, alpha=config.ALPHA, gamma=config.GAMMA,
+                              gibbs_iter=config.GIBBS_ITERATIONS, burn_in=config.BURN_IN)
+            if s is None or np.isnan(s):
+                s = 0.0
+        except Exception as e:
+            print(f"    Error for {ticker}: {e}")
+            s = 0.0
+        raw_scores[ticker] = float(s)
     norm_scores = normalize_scores(raw_scores)
     sorted_norm = sorted(norm_scores.items(), key=lambda x: x[1], reverse=True)
     top_etfs = [{"ticker": t, "hdp_score_norm": s, "raw_score": raw_scores[t]} for t, s in sorted_norm[:config.TOP_N]]
